@@ -30,6 +30,3 @@ When the event is published in line 3, it would send both the topic and body as 
 The <code>/event</code> endpoint is just used to print the data and verify everything is working.
 
 ![alt text](/images/pubsub-diagram.png)
-
-## How to Submit
-Push your code to a version control service such as github or gitlab and send a link to the shared repository to dennis@leafihome.com
