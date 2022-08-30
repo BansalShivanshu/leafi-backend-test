@@ -23,7 +23,8 @@ Testing it all out Publishing an event
 <code>$ ./start-server.sh </code>
 <code>$ curl -X POST -d '{ "url": "http://localhost:8000/event"}' http://localhost:8000/subscribe/topic1</code>
 <code>$ curl -X POST -H "Content-Type: application/json" -d '{"message": "hello"}' http://localhost:8000/publish/topic1</code>
-</pre>     
+</pre>   
+
 The above code would set up a subscription between topic1 and <code> http://localhost:8000/event </code>.
 When the event is published in line 3, it would send both the topic and body as JSON to http://localhost:8000
 
