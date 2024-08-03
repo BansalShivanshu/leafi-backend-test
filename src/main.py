@@ -6,6 +6,7 @@ from flask import (
 from typing import List
 from manager.subscription_manager import SubscriptionManager
 from utils.response import Response
+from utils.validation import Validation
 import utils.http_codes as HttpStatus
 import logging
 
@@ -41,6 +42,11 @@ def setup_subscription(topic: str):
         return Response.create(
             message="URL not found to subscribe",
             status_code=HttpStatus.HTTP_BAD_REQUEST,
+        )
+
+    if not Validation.isValidUrl(data["url"]):
+        return Response.create(
+            message=f"Invalid URL provided.", status_code=HttpStatus.HTTP_BAD_REQUEST
         )
 
     isSubscribed = subscription_manager.subscribe(topic=topic, endpoint=data["url"])
