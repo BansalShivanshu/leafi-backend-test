@@ -23,6 +23,9 @@ class SubscriptionManager:
         topic = topic.strip()
         endpoint = endpoint.strip()
 
+        if len(topic) == 0 or len(endpoint) == 0:
+            return False
+
         if topic not in self._subscription_map:
             self._subscription_map[topic] = set()
 
