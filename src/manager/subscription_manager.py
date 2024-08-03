@@ -14,7 +14,9 @@ class SubscriptionManager:
         """
         Create a subscription between a topic and an endpoint.
 
-        :returns bool: True if mapping is successful, False otherwise
+        :param topic: Topic to be subscribed
+        :param endpoint: Subscribing url
+        :return isSubscribed: True if mapping is successful, False otherwise
         """
         if not topic or not endpoint:
             return False
