@@ -42,5 +42,17 @@ Please note that the following steps are setup to run on a linux based environme
 1. Run the installer using `make run-install`
 1. Start the server using `./start-server.sh`
 
-#### Development
+#### Development and Contribution
 - Use `run-format` command to make sure coding style remains consistent throughout the codebase.
+
+#### Design
+This section will discuss design choices made and implementation details as the project progresees.
+
+*Note*: There is *no data persistence* at this time, i.e. if the server is exited, all estabilished subscriptions and messages will be lost.
+
+*Note*: No pre-processing will be done with the messages. At this point of time, the system is *not responsible* for *message validation* and *sanitization*. All messages are delivered in an *AS-IS* condition.
+
+- `SubscriptionManager`: This class is responsible for handling all subscriptions established.
+    - `subscribe()`: returns true if mapping is adder or the endpoint already exists. This is done so that we only catch real failures of subscription creation.
+    - Whitespaces are trimmed from Topics and Endpoints to ensure system integrity. _User might add spaces incorrectly and not realize_
+    - Whitespaces in an endpoint are not filled with `%20` characters because this system does not actually send messages to an endpoint and urls are pre-urlified by curl and browsers.
