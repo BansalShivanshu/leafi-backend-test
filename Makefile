@@ -15,3 +15,6 @@ run-install:
 
 	echo "Setting up virtual environment..."; \
 	source ${ENV_DIR}/bin/activate && pip install -r requirements.txt
+
+run-server:
+	./start-server.sh
