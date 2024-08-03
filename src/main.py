@@ -38,21 +38,21 @@ def setup_subscription(topic: str):
     data = request.get_json()
     logger.info(f"Subscription requested for topic {topic} with data: {data}")
 
-    if not data or "url" not in data:
+    if not data or "url" not in data or topic.strip() == "":
         return Response.create(
-            message="URL not found to subscribe",
+            message="Please check topic and URL again. At least one was not found.",
             status_code=HttpStatus.HTTP_BAD_REQUEST,
         )
 
     if not Validation.isValidUrl(data["url"]):
         return Response.create(
-            message=f"Invalid URL provided.", status_code=HttpStatus.HTTP_BAD_REQUEST
+            message="Invalid URL provided.", status_code=HttpStatus.HTTP_BAD_REQUEST
         )
 
     isSubscribed = subscription_manager.subscribe(topic=topic, endpoint=data["url"])
     if isSubscribed:
         return Response.create(
-            message=f"Subscription created succcessfully between {topic} and {data['url']}",
+            message=f"Subscription created successfully between {topic} and {data['url']}",
             status_code=HttpStatus.HTTP_CREATED,
         )
 
