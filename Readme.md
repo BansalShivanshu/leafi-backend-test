@@ -33,3 +33,14 @@ When the event is published in line 3, it would send both the topic and body as 
 The `/event` endpoint is just used to print the data and verify everything is working.
 
 ![alt text](/images/pubsub-diagram.png)
+
+
+### Project Workflow
+Please note that the following steps are setup to run on a linux based environment. Running on a Windows system would require small tweeks in `start-server.sh` and `Makefile`'s `run-install`.
+
+#### Running Steps
+1. Run the installer using `make run-install`
+1. Start the server using `./start-server.sh`
+
+#### Development
+- Use `run-format` command to make sure coding style remains consistent throughout the codebase.
