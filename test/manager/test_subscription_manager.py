@@ -1,5 +1,5 @@
 import unittest
-from src.manager.subscription_manager import SubscriptionManager
+from manager.subscription_manager import SubscriptionManager
 
 
 class TestSubscriptionManager(unittest.TestCase):
@@ -52,9 +52,9 @@ class TestSubscriptionManager(unittest.TestCase):
     def test_get_subscribers_success(self):
         self.subscription_manager.subscribe("test-topic", "http://localhost:8000/test")
         result = self.subscription_manager.get_subscribers("test-topic")
-        self.assertEquals(len(result), 1)
-        self.assertEquals(result[0], "http://localhost:8000/test")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0], "http://localhost:8000/test")
 
     def test_get_subscribers_empty(self):
         result = self.subscription_manager.get_subscribers("test-topic")
-        self.assertEquals(len(result), 0)
+        self.assertEqual(len(result), 0)
