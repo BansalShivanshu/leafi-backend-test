@@ -52,7 +52,12 @@ This section will discuss design choices made and implementation details as the 
 
 *Note*: No pre-processing will be done with the messages. At this point of time, the system is *not responsible* for *message validation* and *sanitization*. All messages are delivered in an *AS-IS* condition.
 
+- Endpoints: Following are the implementations of server endpoints
+    - `localhost:8000/subscribers/{topic}`: This endpoint returns a list of subscribed urls to a given topic. If no such topic exists, it will return a http not found error. This endpoint is for debugging purposes only.
+    - `localhost:8000/subscribe/{topic}`: This endpoint is responsible for establishing a subscription between a topic and url. URLs are validated before a subscription is created. Client is notified accordingly.
 - `SubscriptionManager`: This class is responsible for handling all subscriptions established.
     - `subscribe()`: returns true if mapping is adder or the endpoint already exists. This is done so that we only catch real failures of subscription creation.
     - Whitespaces are trimmed from Topics and Endpoints to ensure system integrity. _User might add spaces incorrectly and not realize_
     - Whitespaces in an endpoint are not filled with `%20` characters because this system does not actually send messages to an endpoint and urls are pre-urlified by curl and browsers.
+- `Validation.isValidUrl()`: This method is implemented to validate incoming URLs when creating new subscriptions. We're using a library called [Validators](https://validators.readthedocs.io/en/latest/#) and Regex patterns to achieve the goal.
+    - From some research, this is quite a comprehensive url validator but only validates true urls. It also urls with IP addresses but fails with `localhosts`. Thus we implemented a regex patter as well.
