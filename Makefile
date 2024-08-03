@@ -20,4 +20,5 @@ run-server:
 	./start-server.sh
 
 run-test:
-	pytest
+	coverage run -m pytest
+	coverage report -m
