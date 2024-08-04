@@ -75,5 +75,8 @@ This section will discuss design choices made and implementation details as the 
     - `subscribe()`: returns true if mapping is adder or the endpoint already exists. This is done so that we only catch real failures of subscription creation.
     - Whitespaces are trimmed from Topics and Endpoints to ensure system integrity. _User might add spaces incorrectly and not realize_
     - Whitespaces in an endpoint are not filled with `%20` characters because this system does not actually send messages to an endpoint and urls are pre-urlified by curl and browsers.
+    - At ths time no method exists to remove subscriptions. This is a design choice as is not required for POC and no real usage of this feature at the moment. This feature will be added once databases are involved helping create a real world product. This will also allow us to keep track of all previous subscribers of any topic. With a scalable product, this will allow us to get deeper insights and analytics on user behaviour, product usage. It will also help with security and legal compliance.
 - `Validation.isValidUrl()`: This method is implemented to validate incoming URLs when creating new subscriptions. We're using a library called [Validators](https://validators.readthedocs.io/en/latest/#) and Regex patterns to achieve the goal.
     - From some research, this is quite a comprehensive url validator but only validates true urls. It also urls with IP addresses but fails with `localhosts`. Thus we implemented a regex patter as well.
+
+Databases are not being used at this time for data persistence and log retention. These features will be added at a later time once a basic POC is complete.
