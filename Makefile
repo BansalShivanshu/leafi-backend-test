@@ -1,7 +1,7 @@
 # Variables
 ENV_DIR = venv
 
-.PHONY: run-format run-install
+.PHONY: run-format run-install run-server run-test
 
 run-format:
 	black .
@@ -18,3 +18,7 @@ run-install:
 
 run-server:
 	./start-server.sh
+
+run-test:
+	coverage run -m pytest
+	coverage report -m
