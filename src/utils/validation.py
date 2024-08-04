@@ -14,12 +14,12 @@ class Validation:
             return False
 
         pattern = re.compile(
-            "^https?:\/\/localhost(:[0-9]+)?(\/.*)?$"
+            "^https?://localhost(:[0-9]+)?(/.*)?$"
         )  # patter for http[s]://localhost:PORT/PATH
         try:
             if re.search(pattern, url) or isNormalURL(url):
                 return True
-        except:
+        except:   # noqa
             pass  # isNormalURL throws an error if not True.
 
         return False
