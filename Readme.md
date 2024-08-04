@@ -40,7 +40,23 @@ Please note that the following steps are setup to run on a linux based environme
 
 #### Running Steps
 1. Run the installer using `make run-install`
-1. Start the server using `./start-server.sh`
+1. Start the server using `./start-server.sh` or `make run-server`
+
+#### Testing Instructions
+1. One way to test would be by executing all the unit and integration tests implemented. You can do this by the following command: `make run-test`
+1. Another way is playing around with the server itself. Following are the steps you can take. *Make sure the server is up and [running](#running-steps) before proceeding*.
+    - Start off by testing the `subscribers` endpoint. Sample request:
+    ```.zsh
+    curl -X GET http://localhost:8000/subscribers/topic1
+    ```
+    This should return a 404 NOT FOUND Error saying Topic either does not exist or has no subscribed endpoints.
+1. Let's create some subscriptions to this topic now.
+    ```.zsh
+    curl -X POST -H "Content-Type: application/json" -d '{ "url": "http://localhost:8000/event"}' http://localhost:8000/subscribe/topic1
+    ```
+    - This will create a new subscription between topic1 and the endpoint. Note that headers are a must in this request because the data is in json format. If no headers are provided, server will return a `415 Media Not Supported Error`.
+1. Now execute [second step](#testing-instructions) again. This will return the subscribers to this topic. Feel free to add more topics and subscriptions.
+1. Note, invalid urls and topics will return a `Bad Request` error from the server. More edge cases are tested in unit tests found in `test/test_main.py`
 
 #### Development and Contribution
 - Use `run-format` command to make sure coding style remains consistent throughout the codebase.
