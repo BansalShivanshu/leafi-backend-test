@@ -72,25 +72,10 @@ class TestFlaskApp(unittest.TestCase):
 
     @patch("main.message_broker")
     @patch("main.subscription_manager")
-    def test_publish_message_basic(
+    def test_publish_message(
         self, subscription_manager_mock, message_broker_mock
     ):
-        response = self.client.post(
-            "/publish/ ", json={"message": "test message"}, headers=self.headers
-        )
-        self.assertEqual(response.status_code, http_codes.HTTP_BAD_REQUEST)
-        self.assertEqual(
-            response.get_json(), {"message": "Invalid topic, please try again"}
-        )
-
         subscribers = ["http//localhost:8000/sample"]
-
-        response = self.client.post(
-            "/publish/test-topic", data={"url": subscribers[0]}, headers=self.headers
-        )
-        self.assertEqual(response.status_code, http_codes.HTTP_BAD_REQUEST)
-
-        # set mock data
         subscription_manager_mock.get_subscribers.return_value = subscribers
         message_broker_mock.publish_message.return_value = None
 
@@ -120,10 +105,20 @@ class TestFlaskApp(unittest.TestCase):
         )
 
     def test_publish_message_client_side_errors(self):
-        pass
+        response = self.client.post(
+            "/publish/ ", json={"message": "test message"}, headers=self.headers
+        )
+        self.assertEqual(response.status_code, http_codes.HTTP_BAD_REQUEST)
+        self.assertEqual(
+            response.get_json(), {"message": "Invalid topic, please try again"}
+        )
 
-    def test_publish_message_server_errors(self):
-        pass
+        subscribers = ["http//localhost:8000/sample"]
+        response = self.client.post(
+            "/publish/test-topic", data={"url": subscribers[0]}, headers=self.headers
+        )
+        self.assertEqual(response.status_code, http_codes.HTTP_BAD_REQUEST)
+
 
     def test_event_get_endpoint(self):
         response = self.client.get("/event")
