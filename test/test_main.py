@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import patch
 from main import app
 from utils import http_codes
-from requests.exceptions import ConnectionError
 
 
 class TestFlaskApp(unittest.TestCase):
