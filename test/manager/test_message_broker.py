@@ -56,7 +56,7 @@ class TestMessageBroker(unittest.TestCase):
     def test_publish_message_raised_exception(self, request_mock):
         request_mock.post.side_effect = ConnectionError("Testing raised exception")
 
-        with self.assertLogs("manager.message_broker", level="ERROR") as log:
+        with self.assertLogs("manager.message_broker", level="ERROR"):
             failed_subscribers = self.message_broker.publish_message(
                 topic=self.topic, subscribers=self.subscribers, message=self.message
             )

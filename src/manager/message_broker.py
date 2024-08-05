@@ -62,7 +62,8 @@ class MessageBroker:
                 else:
                     failed_subscribers.append(subscriber)
                     logger.error(
-                        f"Failed to send message to {subscriber}, adding to queue for polling. Client returned: {response.text}"
+                        f"Failed to send message to {subscriber}, \
+                            adding to queue for polling. Client returned: {response.text}"
                     )
             except Exception as e:
                 failed_subscribers.append(subscriber)
