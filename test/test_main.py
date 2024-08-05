@@ -11,6 +11,9 @@ class TestFlaskApp(unittest.TestCase):
         self.client = app.test_client()
         self.headers = {"Content-Type": "application/json"}
 
+    def tearDown(self) -> None:
+        return super().tearDown()
+
     def test_root_endpoint(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, http_codes.HTTP_OK)
@@ -178,4 +181,24 @@ class TestFlaskApp(unittest.TestCase):
         self.assertEqual(response.get_json(), ["http://localhost:8000/testing"])
 
     def test_flask_subscription_events_toggle_integration(self):
-        pass
+        testing_url = "http://localhost:8000/event"
+
+        self.client.post(
+            "/subscribe/topic", json={"url": testing_url}, headers=self.headers
+        )
+
+        self.client.post(
+            "/publish/topic",
+            json={"message": "this is part of a complete system integration test"},
+            headers=self.headers,
+        )
+
+        response = self.client.get("/event")
+        message = response.get_json()
+        print(message)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "message": "Following messages were waiting: {0: 'this is part of a complete system integration test'}"
+            },
+        )
