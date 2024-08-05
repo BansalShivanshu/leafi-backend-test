@@ -10,6 +10,7 @@ from utils.http_codes import (
 )
 from requests.exceptions import ConnectionError
 from collections import deque
+from threading import Thread
 
 
 class TestMessageBroker(unittest.TestCase):
@@ -101,3 +102,37 @@ class TestMessageBroker(unittest.TestCase):
 
         self.assertEqual(message["topic"], self.topic)
         self.assertEqual(message["message_timestamp_utc"], time_isoformat)
+
+    @patch("manager.message_broker.requests")
+    def test_publish_retrieve_concurrently(self, request_mock):
+        request_mock.post.return_value.status_code = HTTP_OK
+
+        def publish_messages():  # pragma no cover
+            for i in range(10):
+                message = self.message.copy()
+                self.message_broker.publish_message(
+                    topic=self.topic, subscribers=self.subscribers, message=message
+                )
+
+        def retrieve_messages(subscriber):  # pragma no cover
+            for i in range(10):
+                message = self.message_broker.retrieve_message(subscriber=subscriber)
+                if message:
+                    self.assertEqual(message["topic"], self.topic)
+                    self.assertEqual(message["message"], self.message["message"])
+
+            threads = []
+            threads.append(Thread(target=publish_messages))
+            for subscriber in self.subscribers:
+                threads.append(Thread(target=retrieve_messages, args=(subscriber)))
+
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+            for subscriber in self.subscribers:
+                with self.message_broker._lock:
+                    self.assertEqual(
+                        len(self.message_broker._messages_map[subscriber]), 0
+                    )
