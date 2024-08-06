@@ -40,6 +40,13 @@ Please note that the following steps are setup to run on a linux based environme
 
 #### Running Steps
 1. Run the installer using `make run-install`
+1. Activate the virtual environment, if not already: `source venv/bin/activate`
+1. Create new tables in DynamoDB and add table names to your env variables. follow the structure mentioned in [section](#database).
+1. Create a new IAM Role in your AWS Account with the followin policies:
+    1. `IAMUserChangePassword`
+    1. `AmazonDynamoDBFullAccess`
+    - Download the CSV in a secure location and configure your AWS CLI with the proper credentials.
+1. Follow AWS CLI setup guide from this [guide](https://medium.com/@amiri.mccain/install-aws-cli-and-configure-credentials-and-config-files-on-a-mac-cda81cf64052)
 1. Start the server using `./start-server.sh` or `make run-server`
 
 #### Testing Instructions
@@ -96,6 +103,42 @@ This section will discuss design choices made and implementation details as the 
     - From some research, this is quite a comprehensive url validator but only validates true urls. It also urls with IP addresses but fails with `localhosts`. Thus we implemented a regex patter as well.
 
 Databases are not being used at this time for data persistence and log retention. These features will be added at a later time once a basic POC is complete.
+
+#### Database
+1. `v2.0` adds database to the service to allow for data persistence. Let's take a look at what the message data might look like in a table:
+    ```
+    timestamp | subscriber | message | is_received
+    -------------------------------------------------
+    utc.iso() |  "/event"  | { json } |    False
+    ```
+    This format avoids list creation, allowing for faster queries and sorting based on timestamps, or status of message being received.
+1. Followin are some pros and cons being considered during this implmentation:
+    - RDS (Postgres)
+        - Pros:
+            1. **ACID compliant**: This is very crucial for a messaging system such as this. Especially to ensure atomicity of operations, consistency with concurrency and larger scale (globally).
+            1. Hgihly performant with joins and queries, and allows for a ridgit strucutre of the data.
+        - Cons:
+            1. **Scaling**: SQL databases typically scale up which can be slow and cost-ineffective.
+    - DynamoDB (NoSQL)
+        - Pros:
+            1. Flexible structure as NoSQL doesn't demand a pre-defined table schema. But strucutre must be maintained in code.
+            1. **Highly Scalable and Cost Effective**: DynamoDB easily scales out as the system grows while remaining cost effective.
+            1. DynamoDB transactions are ACID compliant IN A REGION AND ACCROSS ONE OR TWO TABLES. Read more [here](https://aws.amazon.com/dynamodb/features/#:~:text=Yes%2C%20Amazon%20DynamoDB%20transactions%20are,single%20AWS%20account%20and%20region.)
+        - Cons:
+            1. **Eventful Consistency**: At large scale, dynamoDB does become eventfully consistent. This can be bad for a system such as this because knowing the state of a message is critical in deciding if it should be queued to send.
+                - Although DynamoDB offers guarenteed consistency reads (when requested explicitly), it can cost more and have an increased delay with a growing system.
+1. **Conclusion**: If the data, specifically the message body, lacks a pre-defined structure then DynamoDB is a good choice as it is cost effective and scalable. These are crucial for any large scale system. This coupled with its ability to offer ACID principles (at a smaller scale) is quite a strong choice. Thus, this project implements DynamoDB for message handling.
+
+**Note**: For a system intended to be used for a service such as **NOVA** by leafi, DynamoDB could be a better choice as the devices are localized do not frequent multiple concurrent transactions.
+
+**Note**: Current database for message management is implemented with DynamoDB, intending for a system such as NOVA. Ideally this must be done with IaC with AWS CDK but given time boundaries, this is being skipped. Following are the table names:
+1. `pub-sub-messages`: current prod environment
+1. `pub-sub-messages-test`: current dev/testing environment
+
+**DynamoDB Strcture**:
+- **subscriber (String)**: This is the subscriber url, `http://localhost:8000/event` for example.
+- **timestamp (String)**: This is the timestamp generated at the time of receiving the publish request. It follows the UTC ISO Format. example: `2024-08-04T12:00:00+00:00`
+
 
 #### Next Steps
 1. Implement a true server to allow for real time pub-sub model. Can be accomplished using cloud services.
