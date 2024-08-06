@@ -54,7 +54,7 @@ Please note that the following steps are setup to run on a linux based environme
     ```.zsh
     curl -X POST -H "Content-Type: application/json" -d '{ "url": "http://localhost:8000/event"}' http://localhost:8000/subscribe/topic1
     ```
-    - This will create a new subscription between topic1 and the endpoint. Note that headers are a must in this request because the data is in json format. If no headers are provided, server will return a `415 Media Not Supported Error`.
+    - This will create a new subscription between topic1 and the endpoint. Note that headers are a must in this request because the server accepts data in json format. If no headers are provided, server will return a `415 Media Not Supported Error`.
 1. Now execute [second step](#testing-instructions) again. This will return the subscribers to this topic. Feel free to add more topics and subscriptions.
 1. Note, invalid urls and topics will return a `Bad Request` error from the server. More edge cases are tested in unit tests found in `test/test_main.py`
 
@@ -71,12 +71,56 @@ This section will discuss design choices made and implementation details as the 
 - Endpoints: Following are the implementations of server endpoints
     - `localhost:8000/subscribers/{topic}`: This endpoint returns a list of subscribed urls to a given topic. If no such topic exists, it will return a http not found error. This endpoint is for debugging purposes only.
     - `localhost:8000/subscribe/{topic}`: This endpoint is responsible for establishing a subscription between a topic and url. URLs are validated before a subscription is created. Client is notified accordingly.
+    - `localhost:8000/publish/{topic}`: This endpoint is responsible for pushing out messages to the subscribers of a given topic. Returns a list of subscribers that were not able to receive the message in real time. 
+        - This is performed in a thread safe manner using `Message Broker`. Read more in section below.
+    - `localhost:8000/event`:
+        - `POST`: Endpoint follows a **pub-sub model**. Receives and displays pushed messages in real time.
+        - `GET`: Endpoint follows a **polling model**. Retrieves all messages pushed while system was offline/unavailable.
+    - `localhost:8000/toggle_post_event`: Endpoint allows toggling POST method on /event to mimic a real world scenario of subscriber being offline vs online.
 - `SubscriptionManager`: This class is responsible for handling all subscriptions established.
     - `subscribe()`: returns true if mapping is adder or the endpoint already exists. This is done so that we only catch real failures of subscription creation.
     - Whitespaces are trimmed from Topics and Endpoints to ensure system integrity. _User might add spaces incorrectly and not realize_
     - Whitespaces in an endpoint are not filled with `%20` characters because this system does not actually send messages to an endpoint and urls are pre-urlified by curl and browsers.
     - At ths time no method exists to remove subscriptions. This is a design choice as is not required for POC and no real usage of this feature at the moment. This feature will be added once databases are involved helping create a real world product. This will also allow us to keep track of all previous subscribers of any topic. With a scalable product, this will allow us to get deeper insights and analytics on user behaviour, product usage. It will also help with security and legal compliance.
+- `MessageBroker`: This class is responsible for handling message communication between publishers and subscribers.
+    - Class is thread safe as the system allows for multiple publishers to perform actions at the same time.
+    - Responsible for maintaining messages in memory that could not be sent successfully. (non-persistent data at this time).
+    - Allows subscribers to poll for messages received when they were unavailable.
+    - Responsible for real time publishing to subscribers.
+        - **This requires a contract between us and the subscribers to:**
+            - Subscriber url allows POST requests.
+            - Subscriber endpoint sends relavent message and status codes back to the server while receiving messages.
+            - _Check `/event` POST method implementation in `main` as an example._
+            - ***Question: What is a good way of enforcing this contract?***
 - `Validation.isValidUrl()`: This method is implemented to validate incoming URLs when creating new subscriptions. We're using a library called [Validators](https://validators.readthedocs.io/en/latest/#) and Regex patterns to achieve the goal.
     - From some research, this is quite a comprehensive url validator but only validates true urls. It also urls with IP addresses but fails with `localhosts`. Thus we implemented a regex patter as well.
 
 Databases are not being used at this time for data persistence and log retention. These features will be added at a later time once a basic POC is complete.
+
+#### Next Steps
+1. Implement a true server to allow for real time pub-sub model. Can be accomplished using cloud services.
+    - This can be accomplished by using EC2 for server hosting, or lambdas for `/publish` and `/subscribe` events. 
+    - In a large scale system we would want this to be regionalized. 
+    - Both have pros and cons, especially in terms of scalability, security, availability, concurrency, and costs incurred by us.
+    - For cloud POC start with lambdas.
+1. Persist data in a centralized database. Ideally by regions, but given the small scope of this application at this time, we only need one centralized database.
+    - Maintain state - if a message is sent successfully or not. This adds challanges such for handling errors, concurrency, and packet/data losses.
+1. Maintain logs
+    - Adds log retention for a certain amount of time
+    - Helps maintain a well documented use of the service
+    - Allows setting up alarms and pages in case of failures
+    - Can be beneficial in setting up dashboards and being regulatorily compliant.
+1. Add rate limiting 
+    - Highly system dependent. Some possible implementations could be as follows:
+        - Limit the number of messages that can be sent to a topic per minute. This considers clients being bombarded with messages and helps prevent potential `D/DOS attacks`. Should be configured by the subscriber themselves - ***what is the acceptable rate of messages for you?***
+        - Limit message queue backlog for unavailable subscribers. This ensures efficient resource use, helps prevents our system from abuse and attacks, high costs, and scalability issues.
+        - For Rate Limiting POC, start with IP bans and timeouts.
+1. Add authentication - this prevents a bad actor to subscribe someone without their knowledge.
+    - Some ways of achieving this would be
+        - JWT tokens
+        - User accounts
+1. Allow message purging. This is useful for subscribers that were not able to receive messages. Consider a real world scenario where an application comes online and fetches X messages. This will cause them to perform all the operations that were pushed while offline.
+    - Depends on the subscriber and the system they're trying to build. For a critical system that must perform all actions requested - irrespective of server state - we do not want purging. This could be a very sensative/crucial implementation but must be handled carefully. Eg: Life critical systems in hospitals, financial transaction machines, etc..
+    - But for a system such as a music player or NOVA by Leafi, we would not want to fulfill requests received while offline.
+    - Highly client dependent, but a crusial functionality to offer.
+    - This functionality must be implemented with authentication and security.
