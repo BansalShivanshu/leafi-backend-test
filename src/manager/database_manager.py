@@ -38,9 +38,9 @@ class DatabaseManager:
                         "is_received": False,
                     }
 
-                    batch.putItem(Item=item)
+                    batch.put_item(Item=item)
         except Exception as e:
-            logger.fatal(f"[CRITICAL ERROR] Database failed to upload message: {e}")
+            logger.fatal(f"[FATAL ERROR] Database failed to upload message: {e}")
             logger.fatal(f"Stacktrace: \n {traceback.format_exc()}")
             raise RuntimeError(
                 "Unexpected error occured while adding messages to database. Please check error logs."
@@ -98,7 +98,7 @@ class DatabaseManager:
             messages = [row["message"] for row in data]
             return deque(sorted(messages, key=lambda x: x["message_timestamp_utc"]))
         except Exception as e:
-            logger.fatal(f"[CRITICAL ERROR] Database failed to retreive messages: {e}")
+            logger.fatal(f"[FATAL ERROR] Database failed to retreive messages: {e}")
             logger.fatal(f"Stacktrace: {traceback.format_exc()}")
             raise RuntimeError(
                 "Unexpected error occured while fetching messages from database. Please check error logs."
