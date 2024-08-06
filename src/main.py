@@ -6,19 +6,24 @@ from flask import (
 from typing import List
 from manager.subscription_manager import SubscriptionManager
 from manager.message_broker import MessageBroker
+from manager.database_manager import DatabaseManager
 from utils.response import Response
 from utils.validation import Validation
-from threading import Lock
+from threading import Lock, Thread
 import utils.http_codes as HttpStatus
 import logging
+import os
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+MESSAGE_TABLE_NAME = os.environ.get("MESSAGE_TABLE_NAME")
 ALLOW_POST_EVENT_ENDPOINT = False
 subscription_manager = SubscriptionManager()
 message_broker = MessageBroker()
+database_manager = DatabaseManager(MESSAGE_TABLE_NAME)
 thread_lock = Lock()
 
 
@@ -92,7 +97,10 @@ def publish_message(topic: str):
         )
 
     failed_subscribers = message_broker.publish_message(
-        topic=topic, subscribers=subscribers, message=data
+        topic=topic,
+        subscribers=subscribers,
+        message=data,
+        database_client=database_manager,
     )
     if not failed_subscribers:
         return Response.create(
@@ -108,18 +116,28 @@ def publish_message(topic: str):
 
 @app.route("/event", methods=["GET"])
 def setup_event_subscriber():
-    messages = {}
-    count: int = 0
+    messages = message_broker.retrieve_message(
+        subscriber="http://localhost:8000/event", database_client=database_manager
+    )
+    print(f"got the following messages: {messages}")
 
-    while True:
-        message = message_broker.retrieve_message(
-            subscriber="http://localhost:8000/event"
+    """
+    trigger threads to update database status.
+    delayed execution by 5s to ensure subscriber recieves messages
+    if server fails in the meantime, threads will never execute as they get killed simultaniously.
+    """
+
+    def update_db_status(timestamp):
+        time.sleep(5)
+        database_manager.set_message_received(
+            subscriber="http://localhost:8000/event", timestamp=timestamp
         )
-        if message:
-            messages[count] = message.get("message")
-            count += 1
-        else:
-            break
+
+    for message in messages:
+        print(message["message_timestamp_utc"])
+        Thread(
+            target=update_db_status, args=(message["message_timestamp_utc"],)
+        ).start()
 
     return Response.create(
         message=f"Following messages were waiting: {messages}",

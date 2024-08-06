@@ -1,3 +1,4 @@
+from manager.database_manager import DatabaseManager
 from collections import deque
 from typing import (
     Dict,
@@ -24,7 +25,11 @@ class MessageBroker:
         self._lock = Lock()
 
     def publish_message(
-        self, topic: str, subscribers: List[str], message: Dict[str, str]
+        self,
+        topic: str,
+        subscribers: List[str],
+        message: Dict[str, str],
+        database_client: DatabaseManager,
     ) -> List:
         """
         Method publishes messages to all subscribers for a given topic.
@@ -38,12 +43,18 @@ class MessageBroker:
 
         failed_subscribers = []
 
-        with self._lock:
-            for subscriber in subscribers:
-                if subscriber not in self._messages_map:
-                    self._messages_map[subscriber] = deque()
-                self._messages_map[subscriber].append(message)
-                logger.info(f"added message to queue for {subscriber}")
+        try:
+            database_client.store_messages(subscribers=subscribers, message=message)
+        except Exception:
+            logger.critical(
+                "Using in-memory data for publishing messages due to database failure."
+            )
+            with self._lock:
+                for subscriber in subscribers:
+                    if subscriber not in self._messages_map:
+                        self._messages_map[subscriber] = deque()
+                    self._messages_map[subscriber].append(message)
+                    logger.info(f"added message to queue for {subscriber}")
 
         for subscriber in subscribers:
             # send message
@@ -59,6 +70,12 @@ class MessageBroker:
                     with self._lock:
                         if self._messages_map.get(subscriber):
                             self._messages_map[subscriber].popleft()
+
+                    # update status in database
+                    database_client.set_message_received(
+                        subscriber=subscriber,
+                        timestamp=message["message_timestamp_utc"],
+                    )
                 else:
                     failed_subscribers.append(subscriber)
                     logger.error(
@@ -74,14 +91,21 @@ class MessageBroker:
 
         return failed_subscribers
 
-    def retrieve_message(self, subscriber: str) -> Optional[Dict[str, str]]:
+    def retrieve_message(
+        self, subscriber: str, database_client: DatabaseManager
+    ) -> Optional[Dict[str, str]]:
         """
-        Poll one message at a time for a given subscriber.
+        Returns a queue of messages.
 
         TODO: ONLY THE TRUE SUBSCRIBER CAN CALL THIS! URL X CANNOT FETCH FOR Y.
             THIS WOULD REQUIRE AN AUTHENTICATION LAYER, OUT OF SCOPE AT THE MOMENT
         """
+        database_message_latest = database_client.poll_messages(subscriber=subscriber)
+        local_message_latest = deque()
+
         with self._lock:
             if self._messages_map.get(subscriber):
-                return self._messages_map.get(subscriber).popleft()
-        return None
+                local_message_latest = self._messages_map.get(subscriber)
+
+        database_message_latest.extend(local_message_latest)
+        return sorted(database_message_latest, key=lambda x: x["message_timestamp_utc"])
