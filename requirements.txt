@@ -4,3 +4,4 @@ validators==0.33.0
 pytest==8.3.2
 coverage==7.6.0
 flake8==7.1.0
+requests==2.32.3

@@ -19,7 +19,7 @@ class Validation:
         try:
             if re.search(pattern, url) or isNormalURL(url):
                 return True
-        except:   # noqa
+        except:  # noqa
             pass  # isNormalURL throws an error if not True.
 
         return False
